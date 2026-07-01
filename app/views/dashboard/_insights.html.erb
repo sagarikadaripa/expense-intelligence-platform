@@ -3,15 +3,29 @@
   <p class="text-slate-500 text-sm mt-1">Spending patterns, budget alerts, and recommendations</p>
 </div>
 
-<% if @insights.any? %>
+<% insight_cards = @insights.presence || Array(@dashboard[:insights]).map { |attrs| attrs.with_indifferent_access } %>
+<% recommendations = @dashboard[:recommendations] || [] %>
+<% has_transactions = current_user.transactions.expenses.exists? %>
+
+<% if insight_cards.any? %>
   <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-    <% @insights.each do |insight| %>
-      <div class="p-5 rounded-xl border border-slate-200 <%= insight.severity == 'critical' ? 'bg-red-50 border-red-200' : insight.severity == 'warning' ? 'bg-amber-50 border-amber-200' : 'bg-blue-50 border-blue-200' %>">
-        <p class="text-sm font-semibold text-slate-800"><%= insight.title %></p>
-        <p class="text-sm text-slate-600 mt-2"><%= insight.body %></p>
-        <p class="text-xs text-slate-400 mt-3"><%= insight.created_at.strftime("%d %b %Y") %></p>
+    <% insight_cards.each do |insight| %>
+      <% severity = insight.respond_to?(:severity) ? insight.severity : insight[:severity] %>
+      <% title = insight.respond_to?(:title) ? insight.title : insight[:title] %>
+      <% body = insight.respond_to?(:body) ? insight.body : insight[:body] %>
+      <% created_at = insight.respond_to?(:created_at) ? insight.created_at : nil %>
+      <div class="p-5 rounded-xl border border-slate-200 <%= severity == 'critical' ? 'bg-red-50 border-red-200' : severity == 'warning' ? 'bg-amber-50 border-amber-200' : 'bg-blue-50 border-blue-200' %>">
+        <p class="text-sm font-semibold text-slate-800"><%= title %></p>
+        <p class="text-sm text-slate-600 mt-2"><%= body %></p>
+        <% if created_at %>
+          <p class="text-xs text-slate-400 mt-3"><%= created_at.strftime("%d %b %Y") %></p>
+        <% end %>
       </div>
     <% end %>
+  </div>
+<% elsif has_transactions %>
+  <div class="bg-white rounded-xl border border-slate-200 p-12 text-center">
+    <p class="text-slate-400 text-sm">No insights available for your recent spending yet.</p>
   </div>
 <% else %>
   <div class="bg-white rounded-xl border border-slate-200 p-12 text-center">
@@ -20,7 +34,6 @@
   </div>
 <% end %>
 
-<% recommendations = @dashboard[:recommendations] || [] %>
 <% if recommendations.any? %>
   <div class="mt-8">
     <h2 class="font-semibold text-slate-800 mb-4">Recommendations</h2>

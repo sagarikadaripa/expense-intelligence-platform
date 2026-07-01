@@ -28,7 +28,7 @@
 } %>
 <% has_data = total.positive? %>
 
-<div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+<div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
   <div class="bg-white rounded-xl p-5 border border-slate-200 shadow-sm">
     <p class="text-xs font-medium text-slate-500 uppercase tracking-wide">Total Spent</p>
     <p class="text-2xl font-bold text-slate-900 mt-1"><%= MoneyValue.new(total, currency).formatted %></p>
@@ -36,18 +36,6 @@
   <div class="bg-white rounded-xl p-5 border border-slate-200 shadow-sm">
     <p class="text-xs font-medium text-slate-500 uppercase tracking-wide">Transactions</p>
     <p class="text-2xl font-bold text-slate-900 mt-1"><%= @dashboard[:count] || 0 %></p>
-  </div>
-  <div class="bg-white rounded-xl p-5 border border-slate-200 shadow-sm">
-    <p class="text-xs font-medium text-slate-500 uppercase tracking-wide">Projected</p>
-    <p class="text-2xl font-bold text-slate-900 mt-1">
-      <%= MoneyValue.new(@dashboard.dig(:forecast, :projected_monthly_cents).to_i, currency).formatted %>
-    </p>
-  </div>
-  <div class="bg-white rounded-xl p-5 border border-slate-200 shadow-sm">
-    <p class="text-xs font-medium text-slate-500 uppercase tracking-wide">Budget Risk</p>
-    <p class="text-2xl font-bold mt-1 <%= @dashboard.dig(:forecast, :budget_risk) == 'high' ? 'text-red-600' : 'text-emerald-600' %>">
-      <%= (@dashboard.dig(:forecast, :budget_risk) || 'low').titleize %>
-    </p>
   </div>
 </div>
 

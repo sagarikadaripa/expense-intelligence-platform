@@ -39,6 +39,7 @@ class StatementImportService
     end
 
     statement_import&.mark_completed!
+    InsightsGenerationJob.perform_later(@user.id) if imported.positive?
 
     {
       success: true,
