@@ -10,12 +10,12 @@
 end
 
 if Rails.env.development?
-  user = User.find_or_initialize_by(email: "sagarika@expense.local")
+  user = User.find_or_initialize_by(email: "demo@example.com")
   user.assign_attributes(
-    name: "Sagarika",
-    mobile_number: "+917091362239",
-    whatsapp_number: "+917091362239",
-    password: "password123",
+    name: "Demo User",
+    mobile_number: "+919999999999",
+    whatsapp_number: "+919999999999",
+    password: "changeme123",
     preferred_currency: "INR",
     timezone: "Asia/Kolkata",
     whatsapp_verified: true,
@@ -27,9 +27,8 @@ if Rails.env.development?
   user.transactions.where(description: demo_descriptions).destroy_all
 
   puts ""
-  puts "Your account is ready (import real data via dashboard):"
-  puts "  Email:      sagarika@expense.local"
-  puts "  Password:   password123"
-  puts "  WhatsApp:   +917091362239"
+  puts "Demo account ready (local development only):"
+  puts "  Email:    demo@example.com"
+  puts "  Password: changeme123"
   puts ""
 end

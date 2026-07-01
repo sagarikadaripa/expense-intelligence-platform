@@ -100,11 +100,18 @@ Visit [http://localhost:3000](http://localhost:3000).
 docker compose up --build
 ```
 
-### Your account (after seeding)
+### Local dev account (after seeding)
 
-- **Email:** sagarika@expense.local
-- **Password:** password123
-- **WhatsApp:** +91 7091362239
+- **Email:** demo@example.com
+- **Password:** changeme123
+
+Use only for local development. Sign up through the app for your own account in other environments.
+
+## Security
+
+- Never commit `.env`, `config/master.key`, or real API tokens.
+- Copy `.env.example` to `.env` and set secrets locally.
+- All third-party keys (`OPENAI_API_KEY`, `WHATSAPP_API_TOKEN`, etc.) must come from environment variables only.
 
 ## Data management
 

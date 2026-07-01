@@ -3,7 +3,7 @@
 namespace :data do
   desc "Delete all transactions and import history for a user (EMAIL=...)"
   task clear_transactions: :environment do
-    email = ENV.fetch("EMAIL", "sagarika@expense.local")
+    email = ENV.fetch("EMAIL", "demo@example.com")
     user = User.find_by!(email: email)
     count = user.transactions.count
     user.transactions.destroy_all
