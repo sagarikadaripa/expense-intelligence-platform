@@ -1,0 +1,21 @@
+<% content_for :title, "Dashboard — Expense Intelligence" %>
+
+<div class="min-h-screen bg-slate-50">
+  <%= render "shared/navbar" %>
+  <%= render "shared/flash_toast" %>
+
+  <main class="max-w-7xl mx-auto px-6 py-8">
+    <%= render "tabs" %>
+
+    <% case @tab %>
+    <% when "transactions" %>
+      <%= render "transactions" %>
+    <% when "import" %>
+      <%= render "import" %>
+    <% when "insights" %>
+      <%= render "insights" %>
+    <% else %>
+      <%= render "overview" %>
+    <% end %>
+  </main>
+</div>

@@ -1,0 +1,315 @@
+<div class="txn-page">
+  <div class="txn-page__header">
+    <div>
+      <h1 class="txn-page__title">Transactions</h1>
+      <p class="txn-page__subtitle">All your imported and recorded expenses</p>
+    </div>
+    <button type="button" id="toggle-add-transaction" class="txn-page__add-btn">
+      <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v14M5 12h14" />
+      </svg>
+      Add transaction
+    </button>
+  </div>
+
+  <%= form_with url: dashboard_path, method: :get, class: "txn-filters", local: true do %>
+    <%= hidden_field_tag :tab, "transactions" %>
+    <div class="txn-filters__grid">
+      <div class="import-form__field txn-filters__search">
+        <%= label_tag :q, "Search", class: "import-form__label" %>
+        <%= text_field_tag :q, params[:q], placeholder: "Merchant or description…", class: "import-form__select" %>
+      </div>
+
+      <div class="import-form__field">
+        <%= label_tag :category_id, "Category", class: "import-form__label" %>
+        <%= select_tag :category_id,
+            options_from_collection_for_select(Category.for_user(current_user), :id, :name, params[:category_id]),
+            include_blank: "All categories",
+            class: "import-form__select" %>
+      </div>
+
+      <div class="import-form__field">
+        <%= label_tag :from, "From", class: "import-form__label" %>
+        <%= date_field_tag :from, params[:from], class: "import-form__select" %>
+      </div>
+
+      <div class="import-form__field">
+        <%= label_tag :to, "To", class: "import-form__label" %>
+        <%= date_field_tag :to, params[:to], class: "import-form__select" %>
+      </div>
+
+      <div class="import-form__field">
+        <%= label_tag :payment_method, "Payment", class: "import-form__label" %>
+        <%= select_tag :payment_method,
+            options_for_select([["All methods", ""]] + Transaction::PAYMENT_METHODS.map { |m| [m.humanize, m] }, params[:payment_method]),
+            class: "import-form__select" %>
+      </div>
+
+      <div class="import-form__field">
+        <%= label_tag :source, "Source", class: "import-form__label" %>
+        <%= select_tag :source,
+            options_for_select([["All sources", ""]] + Transaction::SOURCES.map { |s| [s.humanize, s] }, params[:source]),
+            class: "import-form__select" %>
+      </div>
+    </div>
+
+    <div class="txn-filters__actions">
+      <button type="submit" class="txn-page__add-btn txn-page__add-btn--filter">Apply filters</button>
+      <% if @transaction_filter&.active? %>
+        <%= link_to "Clear", dashboard_path(tab: "transactions"), class: "txn-filters__clear" %>
+      <% end %>
+    </div>
+  <% end %>
+
+  <div id="add-transaction-panel" class="txn-add-card hidden">
+    <h2 class="txn-add-card__title">Add expense</h2>
+    <p class="txn-add-card__desc">Record a cash, card, or other payment manually.</p>
+
+    <%= form_with url: transactions_path, scope: :transaction, class: "import-form" do |f| %>
+      <%= hidden_field_tag :tab, "transactions" %>
+      <%= hidden_field_tag :page, params[:page] if params[:page].present? %>
+      <%= render "dashboard/transaction_filter_hidden_fields" %>
+
+      <div class="txn-add-grid">
+        <div class="import-form__field">
+          <%= f.label :amount, "Amount (₹)", class: "import-form__label" %>
+          <%= f.number_field :amount, required: true, min: 0.01, step: 0.01, placeholder: "500.00", class: "import-form__select" %>
+        </div>
+
+        <div class="import-form__field">
+          <%= f.label :transaction_at, "Date", class: "import-form__label" %>
+          <%= f.date_field :transaction_at, value: Time.zone.today, class: "import-form__select" %>
+        </div>
+
+        <div class="import-form__field">
+          <%= f.label :merchant_name, "Merchant", class: "import-form__label" %>
+          <%= f.text_field :merchant_name, placeholder: "e.g. Swiggy, Local store", class: "import-form__select" %>
+        </div>
+
+        <div class="import-form__field">
+          <%= f.label :category_id, "Category", class: "import-form__label" %>
+          <%= f.collection_select :category_id, Category.for_user(current_user), :id, :name,
+              { include_blank: "Auto-detect" }, class: "import-form__select" %>
+        </div>
+
+        <div class="import-form__field">
+          <%= f.label :payment_method, "Payment method", class: "import-form__label" %>
+          <%= f.select :payment_method,
+              Transaction::PAYMENT_METHODS.map { |m| [m.humanize, m] },
+              { selected: "cash" }, class: "import-form__select" %>
+        </div>
+
+        <div class="import-form__field txn-add-grid__full">
+          <%= f.label :description, "Note (optional)", class: "import-form__label" %>
+          <%= f.text_field :description, placeholder: "What was this for?", class: "import-form__select" %>
+        </div>
+      </div>
+
+      <div class="txn-add-actions">
+        <button type="button" id="cancel-add-transaction" class="txn-add-cancel">Cancel</button>
+        <%= f.submit "Save transaction", class: "txn-page__add-btn txn-page__add-btn--submit" %>
+      </div>
+    <% end %>
+  </div>
+
+  <div class="txn-list">
+    <% if @transactions.any? %>
+      <div class="txn-list__header" aria-hidden="true">
+        <span>Description</span>
+        <span>Date</span>
+        <span>Amount</span>
+        <span>Category</span>
+        <span></span>
+      </div>
+    <% end %>
+
+    <% @transactions.each do |txn| %>
+      <article class="txn-item" id="txn-item-<%= txn.id %>">
+        <div class="txn-row">
+          <div class="txn-row__info">
+            <div class="txn-row__title-row">
+              <span class="<%= category_badge_class(txn.category) %>" title="<%= txn.category&.name || 'Other' %>"></span>
+              <p class="txn-row__title"><%= txn.description || txn.merchant&.name || "Expense" %></p>
+            </div>
+            <p class="txn-row__meta">
+              <%= txn.payment_method.humanize %>
+              <span class="txn-row__dot">·</span>
+              <%= txn.source.humanize %>
+            </p>
+          </div>
+
+          <div class="txn-row__date">
+            <time datetime="<%= txn.transaction_at.iso8601 %>">
+              <%= format_transaction_date(txn.transaction_at) %>
+            </time>
+            <span class="txn-row__date-time"><%= format_transaction_time(txn.transaction_at) %></span>
+          </div>
+
+          <div class="txn-row__amount-cell">
+            <p class="txn-row__amount"><%= txn.amount.formatted %></p>
+            <button type="button" class="txn-row__edit" data-edit-target="txn-edit-<%= txn.id %>" aria-label="Edit transaction" title="Edit transaction">
+              <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+              </svg>
+            </button>
+          </div>
+
+          <%= form_with model: txn, url: transaction_path(txn), method: :patch, class: "txn-row__category-form" do |f| %>
+            <%= hidden_field_tag :tab, @tab %>
+            <%= hidden_field_tag :page, params[:page] if params[:page].present? %>
+            <%= render "dashboard/transaction_filter_hidden_fields" %>
+            <%= f.collection_select :category_id, Category.for_user(current_user), :id, :name,
+                { selected: txn.category_id },
+                class: "txn-row__category-select",
+                onchange: "this.form.submit()" %>
+          <% end %>
+
+          <%= button_to transaction_path(txn),
+              method: :delete,
+              params: { tab: @tab, page: params[:page] }.compact.merge(transaction_filter_params),
+              class: "txn-row__delete",
+              form: { class: "txn-row__delete-form", data: { turbo_confirm: "Delete this transaction?" } },
+              title: "Delete transaction",
+              aria: { label: "Delete transaction" } do %>
+            <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75"
+                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M9 7h6m2 0H7m3-3h4a1 1 0 011 1v1H9V5a1 1 0 011-1z" />
+            </svg>
+          <% end %>
+        </div>
+
+        <div id="txn-edit-<%= txn.id %>" class="txn-edit-panel hidden">
+          <%= form_with model: txn, url: transaction_path(txn), method: :patch, class: "txn-edit-form import-form" do |f| %>
+            <%= hidden_field_tag :tab, @tab %>
+            <%= hidden_field_tag :page, params[:page] if params[:page].present? %>
+            <%= render "dashboard/transaction_filter_hidden_fields" %>
+
+            <div class="txn-add-grid">
+              <div class="import-form__field">
+                <%= label_tag "transaction_amount_#{txn.id}", "Amount (₹)", class: "import-form__label" %>
+                <%= number_field_tag "transaction[amount]", (txn.amount_cents / 100.0), required: true, min: 0.01, step: 0.01, class: "import-form__select", id: "transaction_amount_#{txn.id}" %>
+              </div>
+
+              <div class="import-form__field">
+                <%= f.label :transaction_at, "Date", class: "import-form__label" %>
+                <%= f.date_field :transaction_at, value: txn.transaction_at.in_time_zone.to_date, class: "import-form__select" %>
+              </div>
+
+              <div class="import-form__field">
+                <%= label_tag "transaction_merchant_name_#{txn.id}", "Merchant", class: "import-form__label" %>
+                <%= text_field_tag "transaction[merchant_name]", txn.merchant&.name, class: "import-form__select" %>
+              </div>
+
+              <div class="import-form__field">
+                <%= f.label :category_id, "Category", class: "import-form__label" %>
+                <%= f.collection_select :category_id, Category.for_user(current_user), :id, :name,
+                    { selected: txn.category_id }, class: "import-form__select" %>
+              </div>
+
+              <div class="import-form__field">
+                <%= f.label :payment_method, "Payment method", class: "import-form__label" %>
+                <%= f.select :payment_method,
+                    Transaction::PAYMENT_METHODS.map { |m| [m.humanize, m] },
+                    {}, class: "import-form__select" %>
+              </div>
+
+              <div class="import-form__field txn-add-grid__full">
+                <%= f.label :description, "Note", class: "import-form__label" %>
+                <%= f.text_field :description, class: "import-form__select" %>
+              </div>
+            </div>
+
+            <div class="txn-add-actions">
+              <button type="button" class="txn-add-cancel" data-edit-cancel="txn-edit-<%= txn.id %>">Cancel</button>
+              <%= f.submit "Save changes", class: "txn-page__add-btn txn-page__add-btn--submit" %>
+            </div>
+          <% end %>
+        </div>
+      </article>
+    <% end %>
+
+    <% if @transactions.empty? %>
+      <div class="txn-empty">
+        <% if @transaction_filter&.active? %>
+          <p class="txn-empty__title">No matching transactions</p>
+          <p class="txn-empty__text">Try adjusting your filters or search terms.</p>
+          <div class="txn-empty__actions">
+            <%= link_to "Clear filters", dashboard_path(tab: "transactions"), class: "txn-page__add-btn" %>
+          </div>
+        <% else %>
+          <p class="txn-empty__title">No transactions yet</p>
+          <p class="txn-empty__text">Add an expense manually or import your PhonePe / Google Pay statement.</p>
+          <div class="txn-empty__actions">
+            <button type="button" class="txn-page__add-btn" onclick="document.getElementById('add-transaction-panel').classList.remove('hidden'); document.getElementById('toggle-add-transaction').classList.add('hidden');">
+              Add transaction
+            </button>
+            <%= link_to "Import statement", dashboard_path(tab: "import"), class: "txn-empty__link" %>
+          </div>
+        <% end %>
+      </div>
+    <% end %>
+
+    <% if @pagy && (@pagy.pages.to_i > 1 || @transaction_filter&.active?) %>
+      <div class="txn-list__footer">
+        <p class="txn-list__count">
+          <% if @pagy.count.zero? %>
+            No transactions found
+          <% else %>
+            Showing <%= @pagy.from %>–<%= @pagy.to %> of <%= @pagy.count %> transaction<%= @pagy.count == 1 ? "" : "s" %>
+            <% if @transaction_filter&.active? %>
+              <span class="txn-list__filtered">(filtered)</span>
+            <% end %>
+          <% end %>
+        </p>
+        <% if @pagy.pages.to_i > 1 %>
+          <nav class="pagy-nav" aria-label="Transaction pages">
+            <%== pagy_nav(@pagy) if @pagy %>
+          </nav>
+        <% end %>
+      </div>
+    <% end %>
+  </div>
+</div>
+
+<script>
+  (function () {
+    var panel = document.getElementById("add-transaction-panel");
+    var toggle = document.getElementById("toggle-add-transaction");
+    var cancel = document.getElementById("cancel-add-transaction");
+    if (!panel || !toggle) return;
+
+    function openPanel() {
+      panel.classList.remove("hidden");
+      toggle.classList.add("hidden");
+    }
+
+    function closePanel() {
+      panel.classList.add("hidden");
+      toggle.classList.remove("hidden");
+    }
+
+    toggle.addEventListener("click", openPanel);
+    if (cancel) cancel.addEventListener("click", closePanel);
+
+    document.querySelectorAll("[data-edit-target]").forEach(function (button) {
+      button.addEventListener("click", function () {
+        var panelId = button.getAttribute("data-edit-target");
+        var editPanel = document.getElementById(panelId);
+        if (!editPanel) return;
+
+        document.querySelectorAll(".txn-edit-panel").forEach(function (panel) {
+          if (panel !== editPanel) panel.classList.add("hidden");
+        });
+
+        editPanel.classList.toggle("hidden");
+      });
+    });
+
+    document.querySelectorAll("[data-edit-cancel]").forEach(function (button) {
+      button.addEventListener("click", function () {
+        var panel = document.getElementById(button.getAttribute("data-edit-cancel"));
+        if (panel) panel.classList.add("hidden");
+      });
+    });
+  })();
+</script>

@@ -1,0 +1,14 @@
+<% tabs = [
+  ["overview", "Overview"],
+  ["transactions", "Transactions"],
+  ["import", "Import"],
+  ["insights", "Insights"]
+] %>
+
+<nav class="dashboard-tabs" aria-label="Dashboard tabs">
+  <% tabs.each do |key, label| %>
+    <%= link_to label,
+        dashboard_path(tab: key, period: @period),
+        class: "dashboard-tabs__link #{@tab == key ? 'dashboard-tabs__link--active' : ''}" %>
+  <% end %>
+</nav>

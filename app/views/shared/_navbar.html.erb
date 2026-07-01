@@ -1,0 +1,37 @@
+<nav class="bg-white border-b border-slate-200 px-6 py-3">
+  <div class="max-w-7xl mx-auto flex items-center justify-between">
+    <%= link_to dashboard_path, class: "flex items-center gap-3 hover:opacity-80 no-underline" do %>
+      <div class="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center text-white font-bold text-sm shrink-0">EI</div>
+      <span class="font-semibold text-slate-800 text-sm sm:text-base">Expense Intelligence</span>
+    <% end %>
+
+    <details class="profile-dropdown" id="profile-dropdown">
+      <summary class="profile-dropdown__trigger">
+        <span class="profile-dropdown__avatar"><%= current_user.name.to_s.first.upcase %></span>
+        <span class="profile-dropdown__name"><%= current_user.name %></span>
+        <svg class="profile-dropdown__chevron" width="16" height="16" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+          <path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.94a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clip-rule="evenodd" />
+        </svg>
+      </summary>
+
+      <div class="profile-dropdown__menu" role="menu">
+        <%= link_to edit_profile_path, class: "profile-dropdown__item", role: "menuitem" do %>
+          <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" /></svg>
+          Edit profile
+        <% end %>
+        <%= link_to logout_path, data: { turbo_method: :delete }, class: "profile-dropdown__item profile-dropdown__item--danger", role: "menuitem" do %>
+          <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M3 4.25A2.25 2.25 0 015.25 2h5.5A2.25 2.25 0 0113 4.25v2a.75.75 0 01-1.5 0v-2a.75.75 0 00-.75-.75h-5.5a.75.75 0 00-.75.75v11.5c0 .414.336.75.75.75h5.5a.75.75 0 00.75-.75v-2a.75.75 0 011.5 0v2A2.25 2.25 0 0110.75 18h-5.5A2.25 2.25 0 013 15.75V4.25z" clip-rule="evenodd" /><path fill-rule="evenodd" d="M19 10a.75.75 0 00-.75-.75H8.704l1.048-1.144a.75.75 0 10-1.104-1.02l-2.5 2.75a.75.75 0 000 1.08l2.5 2.75a.75.75 0 101.104-1.02l-1.048-1.144H18.25A.75.75 0 0019 10z" clip-rule="evenodd" /></svg>
+          Logout
+        <% end %>
+      </div>
+    </details>
+  </div>
+</nav>
+
+<script>
+  document.addEventListener("click", function (e) {
+    var dropdown = document.getElementById("profile-dropdown");
+    if (!dropdown || !dropdown.open) return;
+    if (!dropdown.contains(e.target)) dropdown.open = false;
+  });
+</script>

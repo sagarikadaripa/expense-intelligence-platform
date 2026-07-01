@@ -1,0 +1,167 @@
+<div class="import-page">
+  <header class="import-page__header">
+    <h1 class="import-page__title">Import transactions</h1>
+    <p class="import-page__subtitle">Upload a CSV or PDF statement from Google Pay or PhonePe to add expenses to your dashboard.</p>
+  </header>
+
+  <% if @import&.in_progress? %>
+    <section class="import-progress" id="import-progress-panel" data-import-id="<%= @import.id %>" data-status-url="<%= import_path(@import) %>">
+      <div class="import-progress__header">
+        <h2 class="import-progress__title">Importing your statement</h2>
+        <p class="import-progress__subtitle" id="import-progress-label">Starting import…</p>
+      </div>
+      <div class="import-progress__track" aria-hidden="true">
+        <div class="import-progress__bar" id="import-progress-bar" style="width: 0%"></div>
+      </div>
+      <p class="import-progress__percent" id="import-progress-percent">0%</p>
+    </section>
+  <% elsif @import&.status == "failed" %>
+    <div class="mb-4 p-3 bg-red-50 text-red-800 rounded-lg text-sm"><%= @import.error_message %></div>
+  <% end %>
+
+  <div class="import-layout">
+    <aside class="import-aside">
+      <section class="import-panel">
+        <h2 class="import-panel__title">How to export</h2>
+        <ol class="import-steps">
+          <li class="import-steps__item">
+            <span class="import-steps__num">1</span>
+            <p><strong>Google Pay / PhonePe</strong> — export your statement as PDF, or build a CSV using the template below</p>
+          </li>
+          <li class="import-steps__item">
+            <span class="import-steps__num">2</span>
+            <p>Upload the file using the form on the right</p>
+          </li>
+        </ol>
+      </section>
+
+      <section class="import-panel">
+        <h2 class="import-panel__title">CSV format</h2>
+        <p class="import-panel__text" style="margin-bottom: 1rem">CSV files must use this layout. You can also upload a Google Pay or PhonePe PDF statement directly.</p>
+
+        <div class="csv-format">
+          <div class="csv-format__header">
+            <h3 class="csv-format__name">Standard template</h3>
+            <%= link_to "Download CSV", "/samples/transactions_template.csv", class: "csv-format__download", download: "transactions_template.csv" %>
+          </div>
+          <pre class="csv-format__preview"><code>date,description,amount
+2026-01-02 11:07 AM,Paid to Hritesh Jaiswal,200
+2026-01-04 12:28 PM,Paid to CAFE AMUDHAM,165</code></pre>
+          <p class="csv-format__hint">Columns: <strong>date</strong> (include time if you have it), <strong>description</strong>, <strong>amount</strong> in ₹</p>
+        </div>
+      </section>
+
+      <section class="import-panel">
+        <h2 class="import-panel__title">What gets imported</h2>
+        <ul class="import-features">
+          <li>Transaction amount &amp; date</li>
+          <li>Merchant / description</li>
+          <li>Auto-categorization via AI</li>
+        </ul>
+        <p class="import-panel__text" style="margin-top:0.75rem">Incoming payments (credits) are skipped — only debits are imported as expenses.</p>
+      </section>
+
+      <section class="import-panel import-panel--muted">
+        <h2 class="import-panel__title">Other ways to track</h2>
+        <p class="import-panel__text">You can also track expenses by messaging your linked WhatsApp number.</p>
+        <% if @transactions.any? %>
+          <p class="import-panel__text" style="margin-top:0.75rem">
+            You have <strong><%= @transactions.size %></strong> recent transactions —
+            <%= link_to "view all", dashboard_path(tab: "transactions"), class: "import-link" %>
+          </p>
+        <% end %>
+      </section>
+    </aside>
+
+    <div class="import-card">
+      <h2 class="import-card__title">Upload file</h2>
+      <p class="import-card__desc">Select which app you exported from, then choose your CSV or PDF.</p>
+
+      <%= form_with url: imports_path, multipart: true, class: "import-form", html: { id: "import-form" } do %>
+        <fieldset <%= "disabled" if @import&.in_progress? %>>
+          <div class="import-form__field">
+            <label for="import_source" class="import-form__label">Source app</label>
+            <select id="import_source" name="source" class="import-form__select">
+              <option value="google_pay">Google Pay</option>
+              <option value="phonepe" selected>PhonePe</option>
+            </select>
+          </div>
+
+          <div class="import-form__field">
+            <label for="statement_file_input" class="import-form__label">Statement file</label>
+            <input type="file" name="file" id="statement_file_input" accept=".csv,.pdf" required class="file-input-hidden"
+                   onchange="var z=document.getElementById('statement_drop_zone'); var n=document.getElementById('statement_file_name'); if(this.files[0]){n.textContent=this.files[0].name; z.classList.add('file-upload-zone--selected');} else {n.textContent='Accepts .csv or .pdf files'; z.classList.remove('file-upload-zone--selected');}" />
+            <label for="statement_file_input" id="statement_drop_zone" class="file-upload-zone">
+              <span class="file-upload-zone__icon" aria-hidden="true">
+                <svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M12 16V4m0 0l-4 4m4-4l4 4M4 17v1a2 2 0 002 2h12a2 2 0 002-2v-1" />
+                </svg>
+              </span>
+              <span>
+                <span class="file-upload-zone__title">Click to browse</span>
+                <span id="statement_file_name" class="file-upload-zone__hint">Accepts .csv or .pdf files</span>
+              </span>
+            </label>
+          </div>
+
+          <button type="submit" class="import-form__submit">Import transactions</button>
+        </fieldset>
+      <% end %>
+
+      <p class="import-card__formats">
+        <%= link_to "Download CSV template", "/samples/transactions_template.csv", download: "transactions_template.csv", class: "import-link" %>
+      </p>
+    </div>
+  </div>
+</div>
+
+<% if @import&.in_progress? %>
+  <script>
+    (function () {
+      var panel = document.getElementById("import-progress-panel");
+      if (!panel) return;
+
+      var statusUrl = panel.dataset.statusUrl;
+      var bar = document.getElementById("import-progress-bar");
+      var label = document.getElementById("import-progress-label");
+      var percentText = document.getElementById("import-progress-percent");
+      var timer;
+
+      function poll() {
+        fetch(statusUrl, { headers: { "Accept": "application/json" } })
+          .then(function (response) { return response.json(); })
+          .then(function (data) {
+            var percent = data.percent || 0;
+            bar.style.width = percent + "%";
+            percentText.textContent = percent + "%";
+
+            if (data.total > 0) {
+              label.textContent = "Imported " + data.processed + " of " + data.total + " transactions";
+            }
+
+            if (data.status === "completed") {
+              label.textContent = "Import complete — " + data.imported + " transactions added";
+              percentText.textContent = "100%";
+              bar.style.width = "100%";
+              clearInterval(timer);
+              window.setTimeout(function () {
+                window.location.href = "<%= dashboard_path(tab: 'transactions') %>";
+              }, 1200);
+            } else if (data.status === "failed") {
+              label.textContent = data.error || "Import failed";
+              clearInterval(timer);
+              window.setTimeout(function () {
+                window.location.reload();
+              }, 2000);
+            }
+          })
+          .catch(function () {
+            label.textContent = "Checking import status…";
+          });
+      }
+
+      poll();
+      timer = window.setInterval(poll, 750);
+    })();
+  </script>
+<% end %>

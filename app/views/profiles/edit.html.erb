@@ -1,0 +1,69 @@
+<% content_for :title, "Profile — Expense Intelligence" %>
+
+<div class="min-h-screen bg-slate-50">
+  <%= render "shared/navbar" %>
+  <%= render "shared/flash_toast" %>
+
+  <main class="max-w-2xl mx-auto px-6 py-8">
+    <div class="mb-6">
+      <%= link_to "← Back to dashboard", dashboard_path, class: "text-sm text-indigo-600 hover:underline" %>
+    </div>
+
+    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+      <div class="bg-gradient-to-r from-indigo-600 to-indigo-500 px-6 py-8 text-white">
+        <div class="flex items-center gap-4">
+          <div class="w-16 h-16 rounded-full bg-white/20 flex items-center justify-center text-2xl font-bold">
+            <%= @user.name.to_s.first.upcase %>
+          </div>
+          <div>
+            <h1 class="text-xl font-bold"><%= @user.name %></h1>
+            <p class="text-indigo-100 text-sm mt-0.5"><%= @user.email %></p>
+          </div>
+        </div>
+      </div>
+
+      <%= form_with model: @user, url: profile_path, method: :patch, class: "p-6 space-y-6" do |f| %>
+        <% if @user.errors.any? %>
+          <div class="p-3 bg-red-50 text-red-700 rounded-lg text-sm">
+            <%= @user.errors.full_messages.join(", ") %>
+          </div>
+        <% end %>
+
+        <section>
+          <h2 class="text-sm font-semibold text-slate-900 uppercase tracking-wide mb-4">Account details</h2>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div class="sm:col-span-2">
+              <%= f.label :name, class: "block text-sm font-medium text-slate-700 mb-1" %>
+              <%= f.text_field :name, class: profile_field_class %>
+            </div>
+            <div class="sm:col-span-2">
+              <%= f.label :email, class: "block text-sm font-medium text-slate-700 mb-1" %>
+              <%= f.email_field :email, class: profile_field_class %>
+            </div>
+            <div>
+              <%= f.label :mobile_number, "Mobile", class: "block text-sm font-medium text-slate-700 mb-1" %>
+              <%= f.telephone_field :mobile_number, class: profile_field_class %>
+            </div>
+            <div>
+              <%= f.label :whatsapp_number, "WhatsApp", class: "block text-sm font-medium text-slate-700 mb-1" %>
+              <%= f.telephone_field :whatsapp_number, class: profile_field_class %>
+            </div>
+            <div>
+              <%= f.label :preferred_currency, "Currency", class: "block text-sm font-medium text-slate-700 mb-1" %>
+              <%= f.select :preferred_currency, %w[INR USD EUR GBP], {}, class: profile_field_class %>
+            </div>
+            <div>
+              <%= f.label :timezone, class: "block text-sm font-medium text-slate-700 mb-1" %>
+              <%= f.time_zone_select :timezone, ActiveSupport::TimeZone.all, {}, class: profile_field_class %>
+            </div>
+          </div>
+        </section>
+
+        <div class="flex flex-col sm:flex-row gap-3 border-t border-slate-100 pt-6">
+          <%= f.submit "Save changes", class: "flex-1 bg-indigo-600 text-white py-2.5 rounded-lg font-medium hover:bg-indigo-700 cursor-pointer text-sm" %>
+          <%= link_to "Cancel", dashboard_path, class: "flex-1 text-center py-2.5 rounded-lg border border-slate-300 text-slate-600 text-sm hover:bg-slate-50" %>
+        </div>
+      <% end %>
+    </div>
+  </main>
+</div>

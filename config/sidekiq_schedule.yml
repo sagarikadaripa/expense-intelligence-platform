@@ -1,0 +1,6 @@
+# See https://github.com/sidekiq/sidekiq/wiki/Scheduling
+:schedule:
+  process_notifications:
+    cron: "*/15 * * * *"
+    class: ScheduledNotificationsJob
+    queue: notifications

@@ -1,0 +1,46 @@
+<% if flash[:notice].present? || flash[:alert].present? %>
+  <div class="toast-stack" id="toast-stack" aria-live="polite" aria-atomic="true">
+    <% if flash[:notice].present? %>
+      <div class="toast toast--success" data-toast>
+        <span class="toast__icon" aria-hidden="true">
+          <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+          </svg>
+        </span>
+        <p class="toast__message"><%= flash[:notice] %></p>
+        <button type="button" class="toast__close" data-toast-close aria-label="Dismiss notification">&times;</button>
+      </div>
+    <% end %>
+
+    <% if flash[:alert].present? %>
+      <div class="toast toast--error" data-toast>
+        <span class="toast__icon" aria-hidden="true">
+          <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+          </svg>
+        </span>
+        <p class="toast__message"><%= flash[:alert] %></p>
+        <button type="button" class="toast__close" data-toast-close aria-label="Dismiss notification">&times;</button>
+      </div>
+    <% end %>
+  </div>
+
+  <script>
+    (function () {
+      var stack = document.getElementById("toast-stack");
+      if (!stack) return;
+
+      function dismiss(toast) {
+        toast.classList.add("toast--leaving");
+        window.setTimeout(function () { toast.remove(); }, 220);
+      }
+
+      stack.querySelectorAll("[data-toast]").forEach(function (toast) {
+        toast.querySelector("[data-toast-close]")?.addEventListener("click", function () {
+          dismiss(toast);
+        });
+        window.setTimeout(function () { dismiss(toast); }, 4000);
+      });
+    })();
+  </script>
+<% end %>

@@ -1,0 +1,224 @@
+<% content_for :head do %>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<% end %>
+
+<div class="flex items-center justify-between mb-8 flex-wrap gap-4">
+  <div>
+    <h1 class="text-2xl font-bold text-slate-900">Spending Overview</h1>
+    <p class="text-slate-500 text-sm mt-1"><%= @dashboard[:narrative] %></p>
+  </div>
+  <div class="flex gap-2 flex-wrap">
+    <% %w[day week month year all].each do |p| %>
+      <%= link_to p.titleize, dashboard_path(tab: "overview", period: p),
+          class: "px-3 py-1.5 rounded-lg text-sm #{@period == p ? 'bg-indigo-600 text-white' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'}" %>
+    <% end %>
+    <%= link_to "Export CSV", export_path(format_type: "csv"), class: "px-3 py-1.5 rounded-lg text-sm bg-white border border-slate-200 text-slate-600 hover:bg-slate-50" %>
+    <%= link_to "Export PDF", export_path(format_type: "pdf"), class: "px-3 py-1.5 rounded-lg text-sm bg-white border border-slate-200 text-slate-600 hover:bg-slate-50" %>
+  </div>
+</div>
+
+<% total = @dashboard[:total_cents].to_i %>
+<% currency = current_user.preferred_currency %>
+<% charts = @dashboard[:charts] || {} %>
+<% chart_payload = {
+  category_pie: charts[:category_pie] || [],
+  daily_line: charts[:daily_line] || [],
+  payment_bar: charts[:payment_bar] || [],
+  merchant_bar: (charts[:merchant_bar] || []).sort_by { |d| -d[:value].to_f }.first(8)
+} %>
+<% has_data = total.positive? %>
+
+<div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+  <div class="bg-white rounded-xl p-5 border border-slate-200 shadow-sm">
+    <p class="text-xs font-medium text-slate-500 uppercase tracking-wide">Total Spent</p>
+    <p class="text-2xl font-bold text-slate-900 mt-1"><%= MoneyValue.new(total, currency).formatted %></p>
+  </div>
+  <div class="bg-white rounded-xl p-5 border border-slate-200 shadow-sm">
+    <p class="text-xs font-medium text-slate-500 uppercase tracking-wide">Transactions</p>
+    <p class="text-2xl font-bold text-slate-900 mt-1"><%= @dashboard[:count] || 0 %></p>
+  </div>
+  <div class="bg-white rounded-xl p-5 border border-slate-200 shadow-sm">
+    <p class="text-xs font-medium text-slate-500 uppercase tracking-wide">Projected</p>
+    <p class="text-2xl font-bold text-slate-900 mt-1">
+      <%= MoneyValue.new(@dashboard.dig(:forecast, :projected_monthly_cents).to_i, currency).formatted %>
+    </p>
+  </div>
+  <div class="bg-white rounded-xl p-5 border border-slate-200 shadow-sm">
+    <p class="text-xs font-medium text-slate-500 uppercase tracking-wide">Budget Risk</p>
+    <p class="text-2xl font-bold mt-1 <%= @dashboard.dig(:forecast, :budget_risk) == 'high' ? 'text-red-600' : 'text-emerald-600' %>">
+      <%= (@dashboard.dig(:forecast, :budget_risk) || 'low').titleize %>
+    </p>
+  </div>
+</div>
+
+<% if has_data %>
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+    <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-6">
+      <h2 class="font-semibold text-slate-800 mb-4">Spending by Category</h2>
+      <div class="h-72 flex items-center justify-center">
+        <canvas id="category-pie-chart" aria-label="Category spending pie chart"></canvas>
+      </div>
+    </div>
+
+    <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-6">
+      <h2 class="font-semibold text-slate-800 mb-4">Daily Spending</h2>
+      <div class="h-72">
+        <canvas id="daily-line-chart" aria-label="Daily spending line chart"></canvas>
+      </div>
+    </div>
+
+    <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-6">
+      <h2 class="font-semibold text-slate-800 mb-4">Payment Methods</h2>
+      <div class="h-72">
+        <canvas id="payment-bar-chart" aria-label="Payment method bar chart"></canvas>
+      </div>
+    </div>
+
+    <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-6">
+      <h2 class="font-semibold text-slate-800 mb-4">Top Merchants</h2>
+      <div class="h-72">
+        <canvas id="merchant-bar-chart" aria-label="Top merchants bar chart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-6 mb-6">
+    <h2 class="font-semibold text-slate-800 mb-4">Category Breakdown</h2>
+    <% by_cat = @dashboard[:by_category] || {} %>
+    <div class="space-y-3">
+      <% by_cat.sort_by { |_, v| -v }.each do |slug, cents| %>
+        <% pct = total.positive? ? (cents.to_f / total * 100).round(1) : 0 %>
+        <div>
+          <div class="flex justify-between text-sm mb-1">
+            <span class="text-slate-700 capitalize"><%= slug.to_s.humanize %></span>
+            <span class="text-slate-500"><%= MoneyValue.new(cents, currency).formatted %> (<%= pct %>%)</span>
+          </div>
+          <div class="h-2 bg-slate-100 rounded-full">
+            <div class="h-2 bg-indigo-500 rounded-full" style="width: <%= pct %>%"></div>
+          </div>
+        </div>
+      <% end %>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      var chartData = <%= chart_payload.to_json.html_safe %>;
+
+      var palette = ["#6366f1", "#8b5cf6", "#ec4899", "#f59e0b", "#10b981", "#06b6d4", "#f97316", "#64748b"];
+      var instances = [];
+
+      function destroyCharts() {
+        instances.forEach(function (chart) { chart.destroy(); });
+        instances = [];
+      }
+
+      function buildChart(id, config) {
+        var canvas = document.getElementById(id);
+        if (!canvas || typeof Chart === "undefined") return;
+        instances.push(new Chart(canvas, config));
+      }
+
+      function renderCharts() {
+        destroyCharts();
+
+        buildChart("category-pie-chart", {
+          type: "doughnut",
+          data: {
+            labels: chartData.category_pie.map(function (d) { return d.label; }),
+            datasets: [{
+              data: chartData.category_pie.map(function (d) { return d.value; }),
+              backgroundColor: palette,
+              borderWidth: 2,
+              borderColor: "#fff"
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { position: "bottom" } }
+          }
+        });
+
+        buildChart("daily-line-chart", {
+          type: "line",
+          data: {
+            labels: chartData.daily_line.map(function (d) { return d.date; }),
+            datasets: [{
+              label: "Spent (₹)",
+              data: chartData.daily_line.map(function (d) { return d.value; }),
+              borderColor: "#6366f1",
+              backgroundColor: "rgba(99, 102, 241, 0.12)",
+              fill: true,
+              tension: 0.3
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: { y: { beginAtZero: true } }
+          }
+        });
+
+        buildChart("payment-bar-chart", {
+          type: "bar",
+          data: {
+            labels: chartData.payment_bar.map(function (d) { return d.label; }),
+            datasets: [{
+              label: "Spent (₹)",
+              data: chartData.payment_bar.map(function (d) { return d.value; }),
+              backgroundColor: "#8b5cf6",
+              borderRadius: 6
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: { y: { beginAtZero: true } }
+          }
+        });
+
+        buildChart("merchant-bar-chart", {
+          type: "bar",
+          data: {
+            labels: chartData.merchant_bar.map(function (d) { return d.label; }),
+            datasets: [{
+              label: "Spent (₹)",
+              data: chartData.merchant_bar.map(function (d) { return d.value; }),
+              backgroundColor: "#10b981",
+              borderRadius: 6
+            }]
+          },
+          options: {
+            indexAxis: "y",
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: { x: { beginAtZero: true } }
+          }
+        });
+      }
+
+      function init() {
+        if (typeof Chart === "undefined") {
+          window.setTimeout(init, 100);
+          return;
+        }
+        renderCharts();
+      }
+
+      document.addEventListener("turbo:load", init);
+      document.addEventListener("DOMContentLoaded", init);
+    })();
+  </script>
+<% else %>
+  <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-10 text-center">
+    <p class="text-slate-500 text-sm mb-2">No expenses in this period.</p>
+    <p class="text-slate-400 text-sm mb-4">
+      Try switching to <strong>Year</strong> or <strong>All</strong> above, or import your PhonePe statement.
+    </p>
+    <%= link_to "Import transactions", dashboard_path(tab: "import"), class: "text-indigo-600 text-sm font-medium hover:underline" %>
+  </div>
+<% end %>
