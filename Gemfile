@@ -17,7 +17,7 @@ gem "faraday", "~> 2.12"
 gem "prawn", "~> 2.5"
 gem "prawn-table"
 gem "pdf-reader", "~> 2.14"
-gem "pagy", "~> 9.3"
+gem "pagy", "~> 43.6"
 
 gem "tzinfo-data", platforms: %i[ windows jruby ]
 
